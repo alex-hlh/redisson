@@ -85,7 +85,7 @@ abstract class ConnectionPool<T extends RedisConnection> {
 
         CompletableFuture<Void> initPromise = new CompletableFuture<>();
         AtomicInteger initializedConnections = new AtomicInteger(minimumIdleSize);
-        int startAmount = Math.min(5, minimumIdleSize);
+        int startAmount = Math.min(2, minimumIdleSize);
         AtomicInteger requests = new AtomicInteger(startAmount);
         for (int i = 0; i < startAmount; i++) {
             createConnection(checkFreezed, requests, entry, initPromise, minimumIdleSize, initializedConnections);
@@ -111,6 +111,7 @@ abstract class ConnectionPool<T extends RedisConnection> {
             createConnection(entry, promise);
             promise.whenComplete((conn, e) -> {
                 if (e == null) {
+                    conn.decUsage();
                     if (!initPromise.isDone()) {
                         entry.addConnection(conn);
                     } else {
@@ -279,6 +280,7 @@ abstract class ConnectionPool<T extends RedisConnection> {
                 return;
             }
 
+            promise.thenApply(c -> c.incUsage());
             connectedSuccessful(entry, promise, conn);
         });
     }

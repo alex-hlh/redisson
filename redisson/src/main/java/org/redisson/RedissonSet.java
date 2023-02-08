@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.redisson.mapreduce.RedissonCollectionMapReduce;
 import org.redisson.misc.CompletableFutureWrapper;
 
 import java.util.*;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 
 /**
@@ -379,11 +380,35 @@ public class RedissonSet<V> extends RedissonExpirable implements RSet<V>, ScanIt
             return new CompletableFutureWrapper<>(0);
         }
 
-        List<Object> args = new ArrayList<Object>(c.size() + 1);
+        List<Object> args = new ArrayList<>(c.size() + 1);
         args.add(getRawName());
         encode(args, c);
 
         return commandExecutor.writeAsync(getRawName(), codec, RedisCommands.SREM, args.toArray());
+    }
+
+    @Override
+    public RFuture<List<V>> containsEachAsync(Collection<V> c) {
+        if (c.isEmpty()) {
+            return new CompletableFutureWrapper<>(Collections.emptyList());
+        }
+
+        List<Object> args = new ArrayList<>(c.size() + 1);
+        args.add(getRawName());
+        encode(args, c);
+
+        RFuture<List<Long>> future = commandExecutor.readAsync(getRawName(), codec, RedisCommands.SMISMEMBER, args.toArray());
+        List<V> keysToCheck = new ArrayList<>(c);
+        CompletionStage<List<V>> f = future.thenApply(res -> {
+            List<V> containedKeys = new ArrayList<>();
+            for (int i = 0; i < res.size(); i++) {
+                if (res.get(i) == 1) {
+                    containedKeys.add(keysToCheck.get(i));
+                }
+            }
+            return containedKeys;
+        });
+        return new CompletableFutureWrapper<>(f);
     }
 
     @Override
@@ -729,6 +754,11 @@ public class RedissonSet<V> extends RedissonExpirable implements RSet<V>, ScanIt
     }
 
     @Override
+    public List<V> containsEach(Collection<V> c) {
+        return get(containsEachAsync(c));
+    }
+
+    @Override
     public RFuture<Boolean> tryAddAsync(V... values) {
         return commandExecutor.evalWriteAsync(getRawName(), codec, RedisCommands.EVAL_BOOLEAN,
                   "for i, v in ipairs(ARGV) do " +
@@ -741,7 +771,7 @@ public class RedissonSet<V> extends RedissonExpirable implements RSet<V>, ScanIt
                             "redis.call('sadd', KEYS[1], unpack(ARGV, i, math.min(i+4999, #ARGV))); " +
                         "end; " +
                         "return 1; ",
-                       Arrays.asList(getRawName()), encode(values).toArray());
+                Arrays.asList(getRawName()), encode(Arrays.asList(values)).toArray());
     }
 
     @Override

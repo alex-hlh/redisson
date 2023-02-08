@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,15 +198,16 @@ public class RedisQueuedBatchExecutor<V, R> extends BaseRedisBatchExecutor<V, R>
 
         
         if (entry.getConnectionFuture() != null) {
-            return entry.getConnectionFuture();
+            connectionFuture = entry.getConnectionFuture();
+            return connectionFuture;
         }
         
         synchronized (this) {
             if (entry.getConnectionFuture() != null) {
-                return entry.getConnectionFuture();
+                connectionFuture = entry.getConnectionFuture();
+                return connectionFuture;
             }
 
-            CompletableFuture<RedisConnection> connectionFuture;
             if (this.options.getExecutionMode() == ExecutionMode.REDIS_WRITE_ATOMIC) {
                 connectionFuture = connectionManager.connectionWriteOp(source, null);
             } else {

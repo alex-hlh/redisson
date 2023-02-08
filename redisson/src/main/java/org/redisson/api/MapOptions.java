@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.redisson.api;
 
 import org.redisson.api.map.MapLoader;
+import org.redisson.api.map.MapLoaderAsync;
 import org.redisson.api.map.MapWriter;
 import org.redisson.api.map.MapWriterAsync;
 
@@ -49,6 +50,8 @@ public class MapOptions<K, V> {
     private MapLoader<K, V> loader;
     private MapWriter<K, V> writer;
     private MapWriterAsync<K, V> writerAsync;
+
+    private MapLoaderAsync<K, V> loaderAsync;
 
     private WriteMode writeMode = WriteMode.WRITE_THROUGH;
     private int writeBehindBatchSize = 50;
@@ -171,4 +174,17 @@ public class MapOptions<K, V> {
         return loader;
     }
 
+    /**
+     * Sets {@link MapLoaderAsync} object.
+     *
+     * @param loaderAsync object
+     * @return MapOptions instance
+     */
+    public MapOptions<K, V> loaderAsync(MapLoaderAsync<K, V> loaderAsync) {
+        this.loaderAsync = loaderAsync;
+        return this;
+    }
+    public MapLoaderAsync<K, V> getLoaderAsync() {
+        return loaderAsync;
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,16 +67,16 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
     public RedissonLocalCachedMap(CommandAsyncExecutor commandExecutor, String name, LocalCachedMapOptions<K, V> options, 
             EvictionScheduler evictionScheduler, RedissonClient redisson, WriteBehindService writeBehindService) {
         super(commandExecutor, name, redisson, options, writeBehindService);
-        init(options, redisson, evictionScheduler);
+        init(options, evictionScheduler);
     }
 
     public RedissonLocalCachedMap(Codec codec, CommandAsyncExecutor connectionManager, String name, LocalCachedMapOptions<K, V> options, 
             EvictionScheduler evictionScheduler, RedissonClient redisson, WriteBehindService writeBehindService) {
         super(codec, connectionManager, name, redisson, options, writeBehindService);
-        init(options, redisson, evictionScheduler);
+        init(options, evictionScheduler);
     }
 
-    private void init(LocalCachedMapOptions<K, V> options, RedissonClient redisson, EvictionScheduler evictionScheduler) {
+    private void init(LocalCachedMapOptions<K, V> options, EvictionScheduler evictionScheduler) {
         syncStrategy = options.getSyncStrategy();
         storeMode = options.getStoreMode();
         storeCacheMiss = options.isStoreCacheMiss();
@@ -243,7 +243,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
     }
     
     @Override
-    public RFuture<V> getAsync(Object key) {
+    protected RFuture<V> getAsync(K key, long threadId) {
         checkKey(key);
 
         CacheKey cacheKey = localCacheView.toCacheKey(key);
@@ -257,7 +257,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
                 return new CompletableFutureWrapper((Void) null);
             }
 
-            CompletableFuture<V> future = loadValue((K) key, false);
+            CompletableFuture<V> future = loadValue((K) key, false, threadId);
             CompletableFuture<V> f = future.thenApply(value -> {
                 if (storeCacheMiss || value != null) {
                     cachePut(cacheKey, key, value);
@@ -267,7 +267,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
             return new CompletableFutureWrapper<>(f);
         }
 
-        RFuture<V> future = super.getAsync((K) key);
+        RFuture<V> future = super.getAsync((K) key, threadId);
         CompletionStage<V> result = future.thenApply(value -> {
             if (storeCacheMiss || value != null) {
                 cachePut(cacheKey, key, value);
@@ -826,7 +826,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
                 continue;
             }
 
-            mapKeys.add(encodeMapKey(value.getKey()));
+            mapKeys.add(encodeMapKey(value.getKey(), mapKeys));
             result.add((V) value.getValue());
         }
 
@@ -869,7 +869,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
             if (value == null) {
                 continue;
             }
-            mapKeys.add(encodeMapKey(value.getKey()));
+            mapKeys.add(encodeMapKey(value.getKey(), mapKeys));
             result.put((K) value.getKey(), (V) value.getValue());
         }
 
@@ -925,7 +925,7 @@ public class RedissonLocalCachedMap<K, V> extends RedissonMap<K, V> implements R
                 continue;
             }
 
-            mapKeys.add(encodeMapKey(value.getKey()));
+            mapKeys.add(encodeMapKey(value.getKey(), mapKeys));
             result.add(new AbstractMap.SimpleEntry<K, V>((K) value.getKey(), (V) value.getValue()));
         }
 

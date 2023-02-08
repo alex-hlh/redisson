@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ public class RedissonTopic implements RTopic {
 
     @Override
     public <M> int addListener(Class<M> type, MessageListener<? extends M> listener) {
-        RFuture<Integer> future = addListenerAsync(type, (MessageListener<M>) listener);
+        RFuture<Integer> future = addListenerAsync(type, listener);
         return commandExecutor.get(future.toCompletableFuture());
     }
 
@@ -117,8 +117,8 @@ public class RedissonTopic implements RTopic {
     }
 
     @Override
-    public <M> RFuture<Integer> addListenerAsync(Class<M> type, MessageListener<M> listener) {
-        PubSubMessageListener<M> pubSubListener = new PubSubMessageListener<>(type, listener, name);
+    public <M> RFuture<Integer> addListenerAsync(Class<M> type, MessageListener<? extends M> listener) {
+        PubSubMessageListener<M> pubSubListener = new PubSubMessageListener<>(type, (MessageListener<M>) listener, name);
         return addListenerAsync(pubSubListener);
     }
 

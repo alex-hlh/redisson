@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ public class DNSMonitor {
             Future<InetSocketAddress> resolveFuture = resolver.resolve(InetSocketAddress.createUnresolved(entry.getKey().getHost(), entry.getKey().getPort()));
             resolveFuture.addListener((FutureListener<InetSocketAddress>) future -> {
                 if (!future.isSuccess()) {
-                    log.error("Unable to resolve " + entry.getKey().getHost(), future.cause());
+                    log.error("Unable to resolve {}", entry.getKey().getHost(), future.cause());
                     promise.complete(null);
                     return;
                 }
@@ -146,7 +146,7 @@ public class DNSMonitor {
             Future<InetSocketAddress> resolveFuture = resolver.resolve(InetSocketAddress.createUnresolved(entry.getKey().getHost(), entry.getKey().getPort()));
             resolveFuture.addListener((FutureListener<InetSocketAddress>) future -> {
                 if (!future.isSuccess()) {
-                    log.error("Unable to resolve " + entry.getKey().getHost(), future.cause());
+                    log.error("Unable to resolve {}", entry.getKey().getHost(), future.cause());
                     promise.complete(null);
                     return;
                 }
@@ -166,22 +166,30 @@ public class DNSMonitor {
 
                         slaveFound = true;
                         if (masterSlaveEntry.hasSlave(newSlaveAddr)) {
-                            masterSlaveEntry.slaveUp(newSlaveAddr, FreezeReason.MANAGER);
-                            masterSlaveEntry.slaveDown(currentSlaveAddr, FreezeReason.MANAGER);
-                            slaves.put(entry.getKey(), newSlaveAddr);
-                            promise.complete(null);
+                            CompletableFuture<Boolean> slaveUpFuture = masterSlaveEntry.slaveUpAsync(newSlaveAddr, FreezeReason.MANAGER);
+                            slaveUpFuture.whenComplete((r, e) -> {
+                                if (e != null) {
+                                    promise.complete(null);
+                                    return;
+                                }
+                                if (r) {
+                                    slaves.put(entry.getKey(), newSlaveAddr);
+                                    masterSlaveEntry.slaveDownAsync(currentSlaveAddr, FreezeReason.MANAGER);
+                                }
+                                promise.complete(null);
+                            });
                         } else {
                             CompletableFuture<Void> addFuture = masterSlaveEntry.addSlave(newSlaveAddr, entry.getKey());
                             addFuture.whenComplete((res, e) -> {
-                                promise.complete(null);
-
                                 if (e != null) {
-                                    log.error("Can't add slave: " + newSlaveAddr, e);
+                                    log.error("Can't add slave: {}", newSlaveAddr, e);
+                                    promise.complete(null);
                                     return;
                                 }
 
-                                masterSlaveEntry.slaveDown(currentSlaveAddr, FreezeReason.MANAGER);
                                 slaves.put(entry.getKey(), newSlaveAddr);
+                                masterSlaveEntry.slaveDownAsync(currentSlaveAddr, FreezeReason.MANAGER);
+                                promise.complete(null);
                             });
                         }
                         break;

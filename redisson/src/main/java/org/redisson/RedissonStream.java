@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -215,7 +215,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
 
         if (rp.getTimeout() != null) {
             params.add("BLOCK");
-            params.add(toSeconds(rp.getTimeout().getSeconds(), TimeUnit.SECONDS)*1000);
+            params.add(rp.getTimeout().toMillis());
         }
 
         if (rp.isNoAck()) {
@@ -258,7 +258,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
 
         if (rp.getTimeout() != null) {
             params.add("BLOCK");
-            params.add(toSeconds(rp.getTimeout().getSeconds(), TimeUnit.SECONDS)*1000);
+            params.add(rp.getTimeout().toMillis());
         }
 
         if (rp.isNoAck()) {
@@ -348,7 +348,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
         
         if (timeout > 0) {
             params.add("BLOCK");
-            params.add(toSeconds(timeout, unit)*1000);
+            params.add(unit.toMillis(timeout));
         }
         
         params.add("STREAMS");
@@ -521,7 +521,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
         
         if (timeout > 0) {
             params.add("BLOCK");
-            params.add(toSeconds(timeout, unit)*1000);
+            params.add(unit.toMillis(timeout));
         }
         
         params.add("STREAMS");
@@ -665,7 +665,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
 
         if (rp.getTimeout() != null) {
             params.add("BLOCK");
-            params.add(toSeconds(rp.getTimeout().getSeconds(), TimeUnit.SECONDS)*1000);
+            params.add(rp.getTimeout().toMillis());
         }
 
         params.add("STREAMS");
@@ -700,7 +700,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
 
         if (rp.getTimeout() != null) {
             params.add("BLOCK");
-            params.add(toSeconds(rp.getTimeout().getSeconds(), TimeUnit.SECONDS)*1000);
+            params.add(rp.getTimeout().toMillis());
         }
 
         params.add("STREAMS");
@@ -862,7 +862,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
         
         if (timeout > 0) {
             params.add("BLOCK");
-            params.add(toSeconds(timeout, unit)*1000);
+            params.add(unit.toMillis(timeout));
         }
         
         params.add("STREAMS");
@@ -1047,7 +1047,7 @@ public class RedissonStream<K, V> extends RedissonExpirable implements RStream<K
         
         if (timeout > 0) {
             params.add("BLOCK");
-            params.add(toSeconds(timeout, unit)*1000);
+            params.add(unit.toMillis(timeout));
         }
         
         params.add("STREAMS");

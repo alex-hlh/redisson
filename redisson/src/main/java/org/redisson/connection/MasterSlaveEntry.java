@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,18 +148,15 @@ public class MasterSlaveEntry {
             if (e != null) {
                 client.shutdownAsync();
             }
-        }).thenApply(r -> client);
+        }).thenApply(r -> {
+            writeConnectionPool.addEntry(masterEntry);
+            if (config.getSubscriptionMode() == SubscriptionMode.MASTER) {
+                pubSubConnectionPool.addEntry(masterEntry);
+            }
+            return client;
+        });
     }
 
-    public boolean slaveDown(ClientConnectionsEntry entry, FreezeReason freezeReason) {
-        ClientConnectionsEntry e = slaveBalancer.freeze(entry, freezeReason);
-        if (e == null) {
-            return false;
-        }
-        
-        return slaveDown(entry);
-    }
-    
     public boolean slaveDown(InetSocketAddress address, FreezeReason freezeReason) {
         ClientConnectionsEntry entry = slaveBalancer.freeze(address, freezeReason);
         if (entry == null) {
@@ -178,15 +175,6 @@ public class MasterSlaveEntry {
         return slaveDownAsync(entry);
     }
 
-    public boolean slaveDown(RedisURI address, FreezeReason freezeReason) {
-        ClientConnectionsEntry entry = slaveBalancer.freeze(address, freezeReason);
-        if (entry == null) {
-            return false;
-        }
-        
-        return slaveDown(entry);
-    }
-
     public CompletableFuture<Boolean> slaveDownAsync(RedisURI address, FreezeReason freezeReason) {
         ClientConnectionsEntry entry = slaveBalancer.freeze(address, freezeReason);
         if (entry == null) {
@@ -202,7 +190,9 @@ public class MasterSlaveEntry {
         }
 
         // add master as slave if no more slaves available
-        if (!config.checkSkipSlavesInit() && slaveBalancer.getAvailableClients() == 0) {
+        if (!config.checkSkipSlavesInit()
+                && !masterEntry.getClient().getAddr().equals(entry.getClient().getAddr())
+                    && slaveBalancer.getAvailableClients() == 0) {
             if (slaveBalancer.unfreeze(masterEntry.getClient().getAddr(), FreezeReason.SYSTEM)) {
                 log.info("master {} used as slave", masterEntry.getClient().getAddr());
             }
@@ -211,13 +201,24 @@ public class MasterSlaveEntry {
         return nodeDown(entry);
     }
 
+    public CompletableFuture<Boolean> slaveDownAsync(ClientConnectionsEntry entry, FreezeReason freezeReason) {
+        ClientConnectionsEntry e = slaveBalancer.freeze(entry, freezeReason);
+        if (e == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        return slaveDownAsync(entry);
+    }
+
     private CompletableFuture<Boolean> slaveDownAsync(ClientConnectionsEntry entry) {
         if (entry.isMasterForRead()) {
             return CompletableFuture.completedFuture(false);
         }
 
         // add master as slave if no more slaves available
-        if (!config.checkSkipSlavesInit() && slaveBalancer.getAvailableClients() == 0) {
+        if (!config.checkSkipSlavesInit()
+                && !masterEntry.getClient().getAddr().equals(entry.getClient().getAddr())
+                    && slaveBalancer.getAvailableClients() == 0) {
             CompletableFuture<Boolean> f = slaveBalancer.unfreezeAsync(masterEntry.getClient().getAddr(), FreezeReason.SYSTEM);
             return f.thenApply(value -> {
                 if (value) {
@@ -426,7 +427,7 @@ public class MasterSlaveEntry {
         InetSocketAddress addr = masterEntry.getClient().getAddr();
         // exclude master from slaves
         if (!config.checkSkipSlavesInit()
-                && !RedisURI.compare(addr, address)) {
+                && !address.equals(addr)) {
             if (slaveDown(addr, FreezeReason.SYSTEM)) {
                 log.info("master {} excluded from slaves", addr);
             }
@@ -436,7 +437,21 @@ public class MasterSlaveEntry {
 
     public CompletableFuture<Boolean> excludeMasterFromSlaves(RedisURI address) {
         InetSocketAddress addr = masterEntry.getClient().getAddr();
-        if (RedisURI.compare(addr, address)) {
+        if (address.equals(addr)) {
+            return CompletableFuture.completedFuture(false);
+        }
+        CompletableFuture<Boolean> downFuture = slaveDownAsync(addr, FreezeReason.SYSTEM);
+        return downFuture.thenApply(r -> {
+            if (r) {
+                log.info("master {} excluded from slaves", addr);
+            }
+            return r;
+        });
+    }
+
+    public CompletableFuture<Boolean> excludeMasterFromSlaves(InetSocketAddress address) {
+        InetSocketAddress addr = masterEntry.getClient().getAddr();
+        if (config.checkSkipSlavesInit() || addr.equals(address)) {
             return CompletableFuture.completedFuture(false);
         }
         CompletableFuture<Boolean> downFuture = slaveDownAsync(addr, FreezeReason.SYSTEM);
@@ -450,6 +465,16 @@ public class MasterSlaveEntry {
 
     public CompletableFuture<Boolean> slaveUpAsync(RedisURI address, FreezeReason freezeReason) {
         return slaveBalancer.unfreezeAsync(address, freezeReason);
+    }
+
+    public CompletableFuture<Boolean> slaveUpAsync(InetSocketAddress address, FreezeReason freezeReason) {
+        CompletableFuture<Boolean> f = slaveBalancer.unfreezeAsync(address, freezeReason);
+        return f.thenCompose(r -> {
+            if (r) {
+                return excludeMasterFromSlaves(address);
+            }
+            return CompletableFuture.completedFuture(r);
+        });
     }
 
     public boolean slaveUp(InetSocketAddress address, FreezeReason freezeReason) {
@@ -500,7 +525,7 @@ public class MasterSlaveEntry {
                     masterEntry.shutdownAsync();
                     masterEntry = oldMaster;
                 }
-                log.error("Unable to change master from: " + oldMaster.getClient().getAddr() + " to: " + address, e);
+                log.error("Unable to change master from: {} to: {}", oldMaster.getClient().getAddr(), address, e);
                 return;
             }
             

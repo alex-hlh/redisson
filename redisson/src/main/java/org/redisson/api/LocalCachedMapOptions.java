@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.redisson.api;
 import java.util.concurrent.TimeUnit;
 
 import org.redisson.api.map.MapLoader;
+import org.redisson.api.map.MapLoaderAsync;
 import org.redisson.api.map.MapWriter;
  import org.redisson.api.map.MapWriterAsync;
 
@@ -402,4 +403,8 @@ public class LocalCachedMapOptions<K, V> extends MapOptions<K, V> {
         return (LocalCachedMapOptions<K, V>) super.loader(loader);
     }
 
+    @Override
+    public LocalCachedMapOptions<K, V> loaderAsync(MapLoaderAsync<K, V> loaderAsync) {
+        return (LocalCachedMapOptions<K, V>) super.loaderAsync(loaderAsync);
+    }
 }

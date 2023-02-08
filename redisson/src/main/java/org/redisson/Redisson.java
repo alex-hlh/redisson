@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,12 +156,12 @@ public class Redisson implements RedissonClient {
     }
 
     @Override
-    public <V> RTimeSeries<V> getTimeSeries(String name) {
+    public <V, L> RTimeSeries<V, L> getTimeSeries(String name) {
         return new RedissonTimeSeries<>(evictionScheduler, commandExecutor, name);
     }
 
     @Override
-    public <V> RTimeSeries<V> getTimeSeries(String name, Codec codec) {
+    public <V, L> RTimeSeries<V, L> getTimeSeries(String name, Codec codec) {
         return new RedissonTimeSeries<>(codec, evictionScheduler, commandExecutor, name);
     }
 
@@ -355,6 +355,11 @@ public class Redisson implements RedissonClient {
     @Override
     public RLock getSpinLock(String name, LockOptions.BackOff backOff) {
         return new RedissonSpinLock(commandExecutor, name, backOff);
+    }
+
+    @Override
+    public RFencedLock getFencedLock(String name) {
+        return new RedissonFencedLock(commandExecutor, name);
     }
 
     @Override

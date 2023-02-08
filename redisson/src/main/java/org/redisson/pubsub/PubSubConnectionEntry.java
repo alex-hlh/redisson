@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,6 +156,10 @@ public class PubSubConnectionEntry {
         return subscribedChannelsAmount.incrementAndGet();
     }
 
+    public boolean isFree() {
+        return subscribedChannelsAmount.get() == connectionManager.getConfig().getSubscriptionsPerConnection();
+    }
+
     public void subscribe(Codec codec, PubSubType type, ChannelName channelName, CompletableFuture<Void> subscribeFuture) {
         ChannelFuture future;
         if (PubSubType.SUBSCRIBE == type) {
@@ -249,7 +253,11 @@ public class PubSubConnectionEntry {
 
     @Override
     public String toString() {
-        return "PubSubConnectionEntry [subscribedChannelsAmount=" + subscribedChannelsAmount + ", conn=" + conn + "]";
+        return "PubSubConnectionEntry{" +
+                "subscribedChannelsAmount=" + subscribedChannelsAmount +
+                ", conn=" + conn +
+                ", subscribeChannelListeners=" + subscribeChannelListeners +
+                ", channelListeners=" + channelListeners +
+                '}';
     }
-    
 }

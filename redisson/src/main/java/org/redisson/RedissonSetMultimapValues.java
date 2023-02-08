@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,11 @@ public class RedissonSetMultimapValues<V> extends RedissonExpirable implements R
     @Override
     public boolean tryAdd(V... values) {
         return get(tryAddAsync(values));
+    }
+
+    @Override
+    public List<V> containsEach(Collection<V> c) {
+        throw new UnsupportedOperationException("This operation is not supported for SetMultimap values");
     }
 
     @Override
@@ -495,6 +500,11 @@ public class RedissonSetMultimapValues<V> extends RedissonExpirable implements R
 
     @Override
     public RFuture<Integer> removeAllCountedAsync(Collection<? extends V> c) {
+        throw new UnsupportedOperationException("This operation is not supported for SetMultimap values");
+    }
+
+    @Override
+    public RFuture<List<V>> containsEachAsync(Collection<V> c) {
         throw new UnsupportedOperationException("This operation is not supported for SetMultimap values");
     }
 

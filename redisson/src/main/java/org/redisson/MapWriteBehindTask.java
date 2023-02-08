@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ public class MapWriteBehindTask {
                 deletedKeys.clear();
             }
         } catch (Exception exception) {
-            log.error("Unable to delete keys: " + deletedKeys, exception);
+            log.error("Unable to delete keys: {}", deletedKeys, exception);
         }
         try {
             if (!addedMap.isEmpty()) {
@@ -105,7 +105,7 @@ public class MapWriteBehindTask {
                 addedMap.clear();
             }
         } catch (Exception exception) {
-            log.error("Unable to add keys: " + addedMap, exception);
+            log.error("Unable to add keys: {}", addedMap, exception);
         }
     }
 
@@ -124,7 +124,7 @@ public class MapWriteBehindTask {
 
                     }
                 } catch (Exception exception) {
-                    log.error("Unable to delete keys: " + deletedKeys, exception);
+                    log.error("Unable to delete keys: {}", deletedKeys, exception);
                 }
             }
         } else {
@@ -140,7 +140,7 @@ public class MapWriteBehindTask {
                         addedMap.clear();
                     }
                 } catch (Exception exception) {
-                    log.error("Unable to add keys: " + addedMap, exception);
+                    log.error("Unable to add keys: {}", addedMap, exception);
                 }
             }
         }

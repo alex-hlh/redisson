@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013-2021 Nikita Koksharov
+ * Copyright (c) 2013-2022 Nikita Koksharov
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ public final class RedissonNode {
             try {
                 config = RedissonNodeFileConfig.fromYAML(new File(configPath));
             } catch (IOException e1) {
-                log.error("Can't parse json config " + configPath, e);
+                log.error("Can't parse json config {}", configPath, e);
                 throw new IllegalArgumentException("Can't parse yaml config " + configPath, e1);
             }
         }
